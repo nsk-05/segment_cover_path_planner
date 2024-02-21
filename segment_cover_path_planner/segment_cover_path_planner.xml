@@ -1,0 +1,5 @@
+ <library path="lib/libsegment_cover_path_planner">
+  <class name="segment_cover_path_planner/SegmentCoverPathPlanner" type="segment_cover_path_planner::SegmentCoverPathPlanner" base_class_type="nav_core::BaseGlobalPlanner">
+    <description>This is a global planner package for creating straight plan for floor cleaning robot.</description>
+  </class>
+ </library>
