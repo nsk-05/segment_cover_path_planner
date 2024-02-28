@@ -4,6 +4,12 @@ from collections import deque
 from numpy import arange
 from occupancy_grid import OccupancyGridManager
 import rospy
+from shapely.geometry import Point as SPoint, Polygon as SPolygon
+
+def point_filter(point, polygon_coordinates):
+    point = SPoint(point)
+    polygon = SPolygon(polygon_coordinates)
+    return polygon.contains(point)
 
 def find_path(matrix, start, end):
     rows = len(matrix)
@@ -48,15 +54,16 @@ exploration_point_dist=0.5
 ogm = OccupancyGridManager('/move_base/global_costmap/costmap',
                                subscribe_to_updates=False)  
 
-polygon_vertices = [(-0.52, 1.72), (1.78, 8.72), (1.78, -3.00), (-0.52, -3.00)]
-# polygon_vertices = [(-0.52, 3.72), (1.78, 1.72), (1.78, -3.00), (-0.52, -4.00)]
+# polygon_vertices = [(-0.52, 1.72), (1.78, 8.72), (1.78, -3.00), (-0.52, -3.00)]
+polygon_vertices = [(2.0, 4.0), (5.5, 5.0), (7.0, 4.0), (4.00 ,1.5),(2.0, 4.0)]
+# polygon_vertices = [(0.0, 5.00), (3.0, 5.0), (3.0, 3.0), (0.0, 3.0)]
 x_values = [vertex[0] for vertex in polygon_vertices]
 y_values = [vertex[1] for vertex in polygon_vertices]
 min_x=min(x_values)
 max_x=max(x_values)
 min_y=min(y_values)
 max_y=max(y_values)
-
+print(min_x,max_x,min_y,max_y)
 goal_list = list()
 reverse=1
 # polygon_vertices = [(-5.3, 3.25), (-5.5,-2.75), (8.5, -2.75), (8.5, 7.05), (6.00,7.05), (6.00, 3.10)]
@@ -64,20 +71,20 @@ count=0
 matrix=[]
 cost_matrix=[]
 last_row=int((polygon_vertices[1][0]-polygon_vertices[0][0])/exploration_point_dist)
-# print(last_row,int((max_x-min_x)/exploration_point_dist))
-# min_x=min(x_values)
+polygon=SPolygon(polygon_vertices)
 for x in arange(min_x,max_x,exploration_point_dist):
     #polygon_vertices[0][0],polygon_vertices[1][0],exploration_point_dist):
     _goal_list = list()
     _goal_matrix = list()
     _cost_matrix = list()
-    for y in arange(min_y,max_y,exploration_point_dist):
+    for y in arange(min_y,max_y,0.25):
         #polygon_vertices[2][1],polygon_vertices[0][1],exploration_point_dist):
         try:
             cost = ogm.get_cost_from_world_x_y(x, y)
-            if(cost == 0):
-                _goal_matrix.append([y,x])
-                _goal_list.append([y,x])
+            _point=(x,y)
+            if(cost == 0 and point_filter(_point,polygon)):
+                _goal_matrix.append([x,y])
+                _goal_list.append([x,y])
                 _cost_matrix.append(0)
             else:
                 _cost_matrix.append(1)
@@ -88,18 +95,6 @@ for x in arange(min_x,max_x,exploration_point_dist):
     matrix.extend(_goal_matrix)
     cost_matrix.append(_cost_matrix)
 
-# print(matrix)
-# print(cost_matrix)
-# matrix=[None, None, None, None, None, None, None, None, None, None, None, 
-#         [-2.5, -0.02], [-2.0, -0.02], [-1.5, -0.02], [-1.0, -0.02], [-0.5, -0.02], [0.0, -0.02], [0.5, -0.02], [1.0, -0.02], [1.5, -0.02], 
-#         None, [-2.5, 0.48], [-2.0, 0.48], [-1.5, 0.48], [-1.0, 0.48], [-0.5, 0.48], [0.0, 0.48], [0.5, 0.48], [1.0, 0.48], [1.5, 0.48], 
-#         None, [-2.5, 0.98], [-2.0, 0.98], [-1.5, 0.98], [-1.0, 0.98], [-0.5, 0.98], [0.0, 0.98], [0.5, 0.98], [1.0, 0.98], [1.5, 0.98], 
-#         None, [-2.5, 1.48], [-2.0, 1.48], None, None, None, [0.0, 1.48], [0.5, 1.48], [1.0, 1.48], [1.5, 1.48]]
-# cost_matrix=[[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-#              [1, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-#              [1, 0, 0, 1, 1, 1, 0, 0, 0, 0]]
 i=0
 full_path=[]
 column_len=len(cost_matrix[0])
@@ -132,7 +127,8 @@ while(i<len(matrix)):
     end_point=(row,column)
     path = find_path(cost_matrix, start_point, end_point)
     # print(path)
-    full_path.extend(path)
+    if(path!=None):
+        full_path.extend(path)
     start_point=(row,column)
     i+=1
 goals_with_angle=[]
