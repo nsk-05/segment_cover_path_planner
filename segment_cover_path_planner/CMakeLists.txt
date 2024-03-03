@@ -66,16 +66,12 @@ add_service_files(
   GetPlan.srv
 )
 
-## Generate actions in the 'action' folder
-#add_action_files(
-#   FILES
-#)
-
 generate_messages(
    DEPENDENCIES
    std_msgs
    geometry_msgs
 )
+
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -141,9 +137,9 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_library(robot_global_planner src/robot_global_planner.cpp)
-target_link_libraries(robot_global_planner ${catkin_LIBRARIES})
-add_dependencies(robot_global_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_library(segment_cover_path_planner src/segment_cover_path_planner.cpp)
+target_link_libraries(segment_cover_path_planner ${catkin_LIBRARIES})
+add_dependencies(segment_cover_path_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}
@@ -166,7 +162,7 @@ add_dependencies(robot_global_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catk
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-install(FILES robot_global_planner_plugin.xml
+install(FILES segment_cover_path_planner.xml
 DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 

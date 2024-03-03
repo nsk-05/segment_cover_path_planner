@@ -1,0 +1,5 @@
+planners:
+  # - name: 'SegmentCoverPathPlanner'
+  #   type: 'segment_cover_path_planner/SegmentCoverPathPlanner'
+  - name: 'navfn/NavfnROS'
+    type: 'navfn/NavfnROS'
