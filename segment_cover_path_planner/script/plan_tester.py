@@ -50,12 +50,12 @@ def connect_waypoints(waypoints):
     plt.show()
 
 rospy.init_node("planner_tester")
-exploration_point_dist=0.5
-ogm = OccupancyGridManager('/move_base/global_costmap/costmap',
+exploration_point_dist=0.25
+ogm = OccupancyGridManager('/move_base_flex/global_costmap/costmap',
                                subscribe_to_updates=False)  
 
 # polygon_vertices = [(-0.52, 1.72), (1.78, 8.72), (1.78, -3.00), (-0.52, -3.00)]
-polygon_vertices = [(2.0, 4.0), (5.5, 5.0), (7.0, 4.0), (4.00 ,1.5),(2.0, 4.0)]
+polygon_vertices = [(-0.3, 1.6), (1.7, 1.6), (1.7, -2.8), (-0.3, -2.8)]
 # polygon_vertices = [(0.0, 5.00), (3.0, 5.0), (3.0, 3.0), (0.0, 3.0)]
 x_values = [vertex[0] for vertex in polygon_vertices]
 y_values = [vertex[1] for vertex in polygon_vertices]
@@ -98,12 +98,13 @@ for x in arange(min_x,max_x,exploration_point_dist):
 i=0
 full_path=[]
 column_len=len(cost_matrix[0])
+print(f"Lenght of the column is {column_len} {len(matrix)}")
 start_point=None
 while(i<len(matrix)):
     while(True):
         row=i//column_len
         column=i%column_len
-        if(row%2!=0):
+        if(row==0 or row%2!=0):
             j=(row*column_len)+(column_len-column)
         else:
             j=i
@@ -124,11 +125,13 @@ while(i<len(matrix)):
         i+=1
         print("start intialized")
         continue
+    # print(matrix[j])
     end_point=(row,column)
     path = find_path(cost_matrix, start_point, end_point)
     # print(path)
     if(path!=None):
         full_path.extend(path)
+        # connect_waypoints(full_path)
     start_point=(row,column)
     i+=1
 goals_with_angle=[]

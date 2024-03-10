@@ -27,7 +27,7 @@
 
     <!-- Move Base backwards compatibility -->
     <node pkg="mbf_costmap_nav" type="move_base_legacy_relay.py" name="move_base" >
-        <param name="base_global_planner" value="navfn/NavfnROS" />
+        <param name="base_global_planner" value="NavfnROS" />
     </node>
 
     <!-- Mobile robot simulator -->

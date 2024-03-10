@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="map" default="$(find segment_cover_path_planner)/test/maps/map_house.yaml"/>
+  <arg name="model" default="burger"/>
+  <arg name="target_x_vel" default="0.05"/>
+  <arg name="target_yaw_vel" default="0.1"/>
+  <!-- Map server -->
+  <node name="map_server" pkg="map_server" type="map_server" args="$(arg map)"/>
+
+  <!-- Localization -->
+  <arg name="initial_pose_x" default="-0.03999999999999998"/>
+  <arg name="initial_pose_y" default="1.46"/>
+  <arg name="initial_pose_a" default="-1.5714"/>
+
+  <include file="$(find turtlebot3_navigation)/launch/amcl.launch">
+    <arg name="initial_pose_x" value="$(arg initial_pose_x)"/>
+    <arg name="initial_pose_y" value="$(arg initial_pose_y)"/>
+    <arg name="initial_pose_a" value="$(arg initial_pose_a)"/>
+  </include>
+
+  <!-- Move base -->
+  <node name="move_base_flex" pkg="mbf_costmap_nav" type="mbf_costmap_nav" required="true" output="screen">
+    <rosparam file="$(find segment_cover_path_planner)/test/param/costmap_common_params_burger.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find segment_cover_path_planner)/test/param/costmap_common_params_burger.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find segment_cover_path_planner)/test/param/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find segment_cover_path_planner)/test/param/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find segment_cover_path_planner)/test/param/planners.yaml" command="load" />
+    <rosparam file="$(find turtlebot3_navigation)/param/dwa_local_planner_params_$(arg model).yaml" command="load" />
+  </node>
+
+  <node name="move_base_legacy_relay" pkg="mbf_costmap_nav" type="move_base_legacy_relay.py">
+    <param name="base_global_planner" value="NavfnROS" />
+    <param name="base_local_planner" value="DWAPlannerROS" />
+  </node>
+
+  <node name="interpolator" pkg="tracking_pid" type="path_interpolator">
+        <param name="target_x_vel" value="0.25"/>
+        <param name="target_yaw_vel" value="0.4"/>
+        <remap from="path" to="/SegmentCoverPathPlanner/coverage_plan"/>
+  </node>
+  <!--Tracking_pid tries to get the robot as close to it's goal point as possible-->
+  <node name="controller" pkg="tracking_pid" type="controller" output="screen">
+      <remap from="move_base/cmd_vel" to="/cmd_vel"/>
+      <remap from="local_trajectory" to="trajectory"/>
+      <param name="controller_debug_enabled" value="True"/>
+      <param name="track_base_link" value="true"/>
+      <param name="base_link_frame" value="base_link"/>
+      <param name="map_frame" value="map"/>
+      <param name="l" value="0.5"/>
+      <param name="Ki_long" value="0.0"/>
+      <param name="Kp_long" value="2.0"/>
+      <param name="Kd_long" value="0.5"/>
+      <param name="Ki_lat" value="0.0"/>
+      <param name="Kp_lat" value="4.0"/>
+      <param name="Kd_lat" value="0.3"/>
+  </node>
+
+</launch>
