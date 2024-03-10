@@ -15,9 +15,14 @@ Developing Planner for covering given segment in the map
 ### Starting robot
     roslaunch robot_gazebo gazebo.launch
 
-### Cleaning complete map
-    roslaunch robot_navigation cleaning.launch
+### starting navigation
+    roslaunch segment_cover_path_planner test_scpp.launch
 
+### rviz
+    roslaunch segment_cover_path_planner rviz.launch
+
+### start scpp
+    rosrun segment_cover_path_planner scpp.py
 ### planner testing
 To test the planner first set segment to be cleaned using publish point function in rviz to select segment polygon
 and run planner_tester.py in robot_global_planner/scripts
