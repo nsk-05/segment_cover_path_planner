@@ -92,8 +92,8 @@ class Segment_coverage_path_planner():
             waypoint_pose=PoseStamped()
             waypoint_pose.header.frame_id='map'
             quad=quaternion_from_euler(0,0,i[2])
-            waypoint_pose.pose.position.x=mat[(i[0]*row_lenght)+i[1]][0]
-            waypoint_pose.pose.position.y=mat[(i[0]*row_lenght)+i[1]][1]
+            waypoint_pose.pose.position.x=self.mat[(i[0]*row_lenght)+i[1]][0]
+            waypoint_pose.pose.position.y=self.mat[(i[0]*row_lenght)+i[1]][1]
             waypoint_pose.pose.orientation.z=quad[2]
             waypoint_pose.pose.orientation.w=quad[3]
             plan.poses.append(waypoint_pose)
@@ -101,6 +101,7 @@ class Segment_coverage_path_planner():
 
     def __init__(self):
         rospy.init_node("planner_tester")
+        self.mat=[]
         self.exploration_point_dist=0.25
         self.ogm = OccupancyGridManager('/move_base_flex/global_costmap/costmap', subscribe_to_updates=False) 
         self.plan_publisher=rospy.Publisher("/SegmentCoverPathPlanner/coverage_plan",Path,queue_size=1)
@@ -109,21 +110,24 @@ class Segment_coverage_path_planner():
         rospy.Subscriber("/clicked_point",PointStamped,self.polygon_callback)
         rospy.Service("/clear_segment",Empty,self.close_polygon)
         rospy.Service("/start_planner",Trigger,self.start_planner)
-        self.polygon_vertices = [(2.0, 4.0), (3.0, 4.0), (3.0, 4.0), (3.00 ,1.5),(2.0, 4.0)] #[(-0.3, 1.6), (1.7, 1.6), (1.7, -2.8), (-0.3, -2.8)]
+        self.polygon_vertices =[]# [(2.0, 4.0), (3.0, 4.0), (3.0, 4.0), (3.00 ,1.5),(2.0, 4.0)] #[(-0.3, 1.6), (1.7, 1.6), (1.7, -2.8), (-0.3, -2.8)]
 
     def polygon_callback(self,msg):
         self.polygon_vertices.append([msg.point.x,msg.point.y])
+        print(self.polygon_vertices)
 
     def close_polygon(self,srv):
         self.polygon_vertices.clear()
         return EmptyResponse()
     
     def start_planner(self,srv):
-        mat,cost_mat=self.create_costmap()
+        print("planner started")
+        print(self.polygon_vertices)
+        self.mat,cost_mat=self.create_costmap()
         row_len=len(cost_mat[0])
-        path=self.find_coverage_plan(mat,cost_mat)
+        path=self.find_coverage_plan(self.mat,cost_mat)
         plan_with_angle=self.find_full_plan(path)
-        pose_goal=mat[(plan_with_angle[0][0]*row_len)+plan_with_angle[0][1]]
+        pose_goal=self.mat[(plan_with_angle[0][0]*row_len)+plan_with_angle[0][1]]
         pose_goal.append(plan_with_angle[0][2])
         send_goal(pose_goal)
         self.publish_plan(plan_with_angle,row_len)
@@ -133,6 +137,8 @@ class Segment_coverage_path_planner():
     def result_callback(self,msg):
         rospy.sleep(2)
         self.cmd_pub.publish(Twist())
+        self.mat=[]
+        self.polygon_vertices.clear()
         print("result callback called")
 
     def create_costmap(self):
@@ -234,15 +240,15 @@ class Segment_coverage_path_planner():
 
 if __name__=="__main__":
     scpp=Segment_coverage_path_planner()
-    mat,cost_mat=scpp.create_costmap()
-    row_len=len(cost_mat[0])
-    path=scpp.find_coverage_plan(mat,cost_mat)
-    plan_with_angle=scpp.find_full_plan(path)
-    pose_goal=mat[(plan_with_angle[0][0]*row_len)+plan_with_angle[0][1]]
-    pose_goal.append(plan_with_angle[0][2])
-    send_goal(pose_goal)
+    # mat,cost_mat=scpp.create_costmap()
+    # row_len=len(cost_mat[0])
+    # path=scpp.find_coverage_plan(mat,cost_mat)
+    # plan_with_angle=scpp.find_full_plan(path)
+    # pose_goal=mat[(plan_with_angle[0][0]*row_len)+plan_with_angle[0][1]]
+    # pose_goal.append(plan_with_angle[0][2])
+    # send_goal(pose_goal)
 
 
-    scpp.publish_plan(plan_with_angle,row_len)
-    print("end_of planning")
+    # scpp.publish_plan(plan_with_angle,row_len)
+    # print("end_of planning")
     rospy.spin()

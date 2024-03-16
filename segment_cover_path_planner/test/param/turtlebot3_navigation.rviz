@@ -348,7 +348,7 @@ Visualization Manager:
       Marker Topic: /interpolator_viz
       Name: Marker
       Namespaces:
-        interpolated: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -409,6 +409,17 @@ Visualization Manager:
       Topic: /move_base_flex/DWAPlannerROS/local_plan
       Unreliable: false
       Value: false
+    - Alpha: 1
+      Class: rviz/PointStamped
+      Color: 204; 41; 204
+      Enabled: true
+      History Length: 1
+      Name: PointStamped
+      Queue Size: 10
+      Radius: 0.20000000298023224
+      Topic: /clicked_point
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -435,7 +446,7 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: -1.6257963180541992
+      Angle: -0.5007995367050171
       Class: rviz/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
@@ -445,7 +456,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 90.14087677001953
+      Scale: 47.38639831542969
       Target Frame: <Fixed Frame>
       X: 0.08110414445400238
       Y: -0.45166757702827454
