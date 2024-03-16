@@ -23,6 +23,14 @@ Developing Planner for covering given segment in the map
 
 ### start scpp
     rosrun segment_cover_path_planner scpp.py
+
+#### Use publish point in rviz to give interested coverage segment
+
+### start planning
+    rosserice call /start_planning "{}"
+
+#### To Cancel the selected polygon 
+    rosserice call /clear_segment "{}"
 ### planner testing
 To test the planner first set segment to be cleaned using publish point function in rviz to select segment polygon
 and run planner_tester.py in robot_global_planner/scripts
