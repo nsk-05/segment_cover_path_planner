@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
 import matplotlib.pyplot as plt
-from collections import deque
-from queue import PriorityQueue
-from numpy import arange
-from occupancy_grid import OccupancyGridManager
-import rospy
-
-
 
 def connect_waypoints(waypoints):
     x_coords = [point[0] for point in waypoints]

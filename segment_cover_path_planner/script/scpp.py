@@ -5,9 +5,39 @@ from numpy import arange
 from occupancy_grid import OccupancyGridManager
 from tf.transformations import quaternion_from_euler
 import rospy
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from tracking_pid.msg import FollowPathResult,FollowPathActionResult
+import actionlib
 from shapely.geometry import Point as SPoint, Polygon as SPolygon
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped,Twist,PointStamped
 from nav_msgs.msg import Path
+from std_srvs.srv import EmptyResponse,Empty
+from std_srvs.srv import Trigger, TriggerResponse
+
+def send_goal(goal_pose):
+    # Initialize the move_base client
+    client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+    client.wait_for_server()
+
+    # Create a goal to send to the move_base server
+    goal = MoveBaseGoal()
+    goal.target_pose.header.frame_id = "map"
+    goal.target_pose.header.stamp = rospy.Time.now()
+
+    # Set the goal position
+    goal.target_pose.pose.position.x = goal_pose[0]
+    goal.target_pose.pose.position.y = goal_pose[1]
+    _,_,z,w=quaternion_from_euler(0.0,0.0,goal_pose[2])
+    goal.target_pose.pose.orientation.z = z
+    goal.target_pose.pose.orientation.w = w
+
+    print("sending the intial goal",goal_pose)
+    # Send the goal
+    client.send_goal(goal)
+
+    # Wait for the result
+    res=client.wait_for_result()
+    return res
 
 def point_filter(point, polygon_coordinates):
     point = SPoint(point)
@@ -61,62 +91,49 @@ class Segment_coverage_path_planner():
         for i in full_plan:
             waypoint_pose=PoseStamped()
             waypoint_pose.header.frame_id='map'
-            # x,y=mat[(i[0]*row_lenght)+i[1]]
-            # if(pre_yaw==None):
-            #     pre_yaw=i[2]
-            #     pre_y=i[1]
-            #     quad=quaternion_from_euler(0,0,pre_yaw)
-            #     print(x,y,quad[2],quad[3])
-            #     waypoint_pose.pose.position.x=mat[(i[0]*row_lenght)+i[1]][0]
-            #     waypoint_pose.pose.position.y=mat[(i[0]*row_lenght)+i[1]][1]
-            #     waypoint_pose.pose.orientation.z=quad[2]
-            #     waypoint_pose.pose.orientation.w=quad[3]
-            #     plan.poses.append(waypoint_pose)
-            # elif(pre_yaw==i[2]):
-            #     if(pre_y==i[1]):
-            #         quad=quaternion_from_euler(0,0,i[2])
-            #         waypoint_pose.pose.position.x=mat[(i[0]*row_lenght)+i[1]][0]
-            #         waypoint_pose.pose.position.y=mat[(i[0]*row_lenght)+i[1]][1]
-            #         waypoint_pose.pose.orientation.z=quad[2]
-            #         waypoint_pose.pose.orientation.w=quad[3]
-            #         plan.poses.append(waypoint_pose)
-            #         pre_yaw=i[2]
-            #         pre_y=i[1]
-            #     continue
-            # else:
-            #     quad=quaternion_from_euler(0,0,pre_yaw)
-            #     print(x,y,quad[2],quad[3])
-            #     waypoint_pose.pose.position.x=mat[(i[0]*row_lenght)+i[1]][0]
-            #     waypoint_pose.pose.position.y=mat[(i[0]*row_lenght)+i[1]][1]
-            #     waypoint_pose.pose.orientation.z=quad[2]
-            #     waypoint_pose.pose.orientation.w=quad[3]
-            #     plan.poses.append(waypoint_pose)
-            #     quad=quaternion_from_euler(0,0,i[2])
-            #     waypoint_pose.pose.position.x=mat[(i[0]*row_lenght)+i[1]][0]
-            #     waypoint_pose.pose.position.y=mat[(i[0]*row_lenght)+i[1]][1]
-            #     waypoint_pose.pose.orientation.z=quad[2]
-            #     waypoint_pose.pose.orientation.w=quad[3]
-            #     plan.poses.append(waypoint_pose)
-            #     pre_yaw=i[2]
-            #     pre_y=i[1]
-            # waypoint_pose=PoseStamped()
-            # waypoint_pose.header.frame_id='map'
-            # x,y=mat[(i[0]*row_lenght)+i[1]]
             quad=quaternion_from_euler(0,0,i[2])
             waypoint_pose.pose.position.x=mat[(i[0]*row_lenght)+i[1]][0]
             waypoint_pose.pose.position.y=mat[(i[0]*row_lenght)+i[1]][1]
             waypoint_pose.pose.orientation.z=quad[2]
             waypoint_pose.pose.orientation.w=quad[3]
             plan.poses.append(waypoint_pose)
-        
         self.plan_publisher.publish(plan)
 
     def __init__(self):
         rospy.init_node("planner_tester")
         self.exploration_point_dist=0.25
         self.ogm = OccupancyGridManager('/move_base_flex/global_costmap/costmap', subscribe_to_updates=False) 
-        self.plan_publisher=rospy.Publisher("/SegmentCoverPathPlanner/coverage_plan",Path,queue_size=1) 
-        self.polygon_vertices = [(-0.3, 1.6), (1.7, 1.6), (1.7, -2.8), (-0.3, -2.8)]
+        self.plan_publisher=rospy.Publisher("/SegmentCoverPathPlanner/coverage_plan",Path,queue_size=1)
+        self.cmd_pub=rospy.Publisher("/cmd_vel",Twist,queue_size=1)
+        rospy.Subscriber("/follow_path/result",FollowPathActionResult,self.result_callback) 
+        rospy.Subscriber("/clicked_point",PointStamped,self.polygon_callback)
+        rospy.Service("/clear_segment",Empty,self.close_polygon)
+        rospy.Service("/start_planner",Trigger,self.start_planner)
+        self.polygon_vertices = [(2.0, 4.0), (3.0, 4.0), (3.0, 4.0), (3.00 ,1.5),(2.0, 4.0)] #[(-0.3, 1.6), (1.7, 1.6), (1.7, -2.8), (-0.3, -2.8)]
+
+    def polygon_callback(self,msg):
+        self.polygon_vertices.append([msg.point.x,msg.point.y])
+
+    def close_polygon(self,srv):
+        self.polygon_vertices.clear()
+        return EmptyResponse()
+    
+    def start_planner(self,srv):
+        mat,cost_mat=self.create_costmap()
+        row_len=len(cost_mat[0])
+        path=self.find_coverage_plan(mat,cost_mat)
+        plan_with_angle=self.find_full_plan(path)
+        pose_goal=mat[(plan_with_angle[0][0]*row_len)+plan_with_angle[0][1]]
+        pose_goal.append(plan_with_angle[0][2])
+        send_goal(pose_goal)
+        self.publish_plan(plan_with_angle,row_len)
+        print("end_of planning")
+        return TriggerResponse(success=True,message="bot started")
+
+    def result_callback(self,msg):
+        rospy.sleep(2)
+        self.cmd_pub.publish(Twist())
+        print("result callback called")
 
     def create_costmap(self):
         x_values = [vertex[0] for vertex in self.polygon_vertices]
@@ -221,16 +238,11 @@ if __name__=="__main__":
     row_len=len(cost_mat[0])
     path=scpp.find_coverage_plan(mat,cost_mat)
     plan_with_angle=scpp.find_full_plan(path)
+    pose_goal=mat[(plan_with_angle[0][0]*row_len)+plan_with_angle[0][1]]
+    pose_goal.append(plan_with_angle[0][2])
+    send_goal(pose_goal)
 
-    print(cost_mat)
-    print("=====================================================================")
-    print(mat)
-    print("=====================================================================")
-    print(plan_with_angle)
-    print("=====================================================================")
 
     scpp.publish_plan(plan_with_angle,row_len)
-    # print(plan_with_angle)
-    # connect_waypoints(path)
     print("end_of planning")
     rospy.spin()
